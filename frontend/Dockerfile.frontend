@@ -1,0 +1,21 @@
+# Use the official Node 20 Alpine image for a lightweight Next.js development container.
+FROM node:20-alpine
+
+# Enable pnpm via Corepack so we can use the package manager without a separate install step.
+RUN corepack enable
+
+# All frontend source lives under /app.
+WORKDIR /app
+
+# Copy the package manifest first so dependency installation can be cached.
+COPY package.json ./
+RUN pnpm install --no-frozen-lockfile
+
+# Copy the rest of the frontend source.
+COPY . .
+
+# Expose the Next.js development server port.
+EXPOSE 3000
+
+# Start the app in development mode and bind to all interfaces for Docker.
+CMD ["pnpm", "dev", "--hostname", "0.0.0.0", "--port", "3000"]
