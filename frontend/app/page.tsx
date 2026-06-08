@@ -1,33 +1,20 @@
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+import Link from "next/link";
 
 export default function HomePage() {
   return (
-    <main className="page-shell">
-      <section className="hero">
-        <p className="eyebrow">Phase 0 Foundation</p>
-        <h1>NeuroCity Nexus</h1>
-        <p className="lede">
-          A containerized city-brain development stack with TimescaleDB, Redis,
-          FastAPI, and Next.js ready for the next phase of the platform.
+    <main className="min-h-screen bg-[#0a0a0a] px-6 py-20 text-white">
+      <div className="mx-auto max-w-4xl rounded-3xl border border-white/10 bg-[#0f0f1a] p-10 shadow-2xl">
+        <p className="text-sm uppercase tracking-[0.3em] text-blue-400">NeuroCity Nexus</p>
+        <h1 className="mt-4 text-5xl font-semibold">City Brain AI foundation</h1>
+        <p className="mt-4 max-w-2xl text-white/70">
+          FastAPI, TimescaleDB, Redis, and Next.js are wired for Phase 1 digital twin development.
         </p>
-        <div className="card-row">
-          <article className="card">
-            <span className="label">Backend</span>
-            <strong>FastAPI</strong>
-            <p>{apiBaseUrl}</p>
-          </article>
-          <article className="card">
-            <span className="label">Database</span>
-            <strong>PostgreSQL 15 + TimescaleDB</strong>
-            <p>High-ingest telemetry storage</p>
-          </article>
-          <article className="card">
-            <span className="label">Realtime</span>
-            <strong>Redis 7</strong>
-            <p>Caching, messaging, and coordination</p>
-          </article>
+        <div className="mt-8 flex gap-3">
+          <Link href="/digital-twin" className="rounded-full bg-blue-500 px-5 py-3 font-medium text-white">
+            Open Digital Twin
+          </Link>
         </div>
-      </section>
+      </div>
     </main>
   );
 }
