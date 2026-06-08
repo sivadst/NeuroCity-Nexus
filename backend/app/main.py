@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -7,11 +9,12 @@ from src.api.router import register_routes
 settings = get_settings()
 
 app = FastAPI(
-    title="NeuroCity Nexus API",
-    description="Foundational backend services for the NeuroCity Nexus city-brain platform.",
-    version="0.1.0",
+    title="NeuroCity Nexus",
+    description="City Brain AI API",
+    version="1.0.0",
 )
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -20,14 +23,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+# Register all routes
 register_routes(app)
-
-
-@app.get("/", tags=["meta"])
-def root() -> dict[str, str]:
-    return {
-        "name": "NeuroCity Nexus API",
-        "environment": settings.app_env,
-        "docs": "/docs",
-    }

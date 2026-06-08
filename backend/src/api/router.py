@@ -1,8 +1,3 @@
-from src.api.v1.endpoints import simulation
-
-# Add this inside your router setup:
-router.include_router(simulation.router, prefix="/api/v1")
-
 from __future__ import annotations
 
 from contextlib import suppress
@@ -16,16 +11,17 @@ from redis.asyncio import Redis
 from src.db.session import AsyncSessionLocal
 from src.api.v1.endpoints.digital_twin import router as twin_router
 from src.api.v1.endpoints.twin_ws import twin_websocket
+from src.api.v1.endpoints.simulation import router as simulation_router
 
 settings = get_settings()
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(twin_router)
-api_router.include_router(simulation.router)
+api_router.include_router(simulation_router)
 
 
 async def health_handler() -> JSONResponse:
-    """Return DB and Redis health status for the platform."""
+    """Return DB and Redis health status."""
     db_ok = False
     redis_ok = False
     async with AsyncSessionLocal() as session:
@@ -36,17 +32,15 @@ async def health_handler() -> JSONResponse:
         client = Redis.from_url(settings.redis_url, decode_responses=True)
         redis_ok = bool(await client.ping())
         await client.aclose()
-    return JSONResponse(
-        {
-            "status": "healthy" if db_ok and redis_ok else "degraded",
-            "database": db_ok,
-            "redis": redis_ok,
-        }
-    )
+    return JSONResponse({
+        "status": "healthy" if db_ok and redis_ok else "degraded",
+        "database": db_ok,
+        "redis": redis_ok,
+    })
 
 
 def register_routes(app: FastAPI) -> None:
-    """Register HTTP and websocket routes on the FastAPI application."""
+    """Register HTTP and websocket routes."""
     app.include_router(api_router)
     app.add_api_route("/health", health_handler, methods=["GET"], tags=["Health"])
     app.add_websocket_route("/ws/twin", twin_websocket)
