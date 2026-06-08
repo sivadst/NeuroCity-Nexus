@@ -1,3 +1,8 @@
+from src.api.v1.endpoints import simulation
+
+# Add this inside your router setup:
+router.include_router(simulation.router, prefix="/api/v1")
+
 from __future__ import annotations
 
 from contextlib import suppress
@@ -16,6 +21,7 @@ settings = get_settings()
 
 api_router = APIRouter(prefix="/api/v1")
 api_router.include_router(twin_router)
+api_router.include_router(simulation.router)
 
 
 async def health_handler() -> JSONResponse:

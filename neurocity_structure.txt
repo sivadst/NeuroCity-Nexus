@@ -1,0 +1,131 @@
+Folder PATH listing for volume OS
+Volume serial number is 0000004E 648A:EB25
+C:.
+¦   .env
+¦   .env.example
+¦   docker-compose.yml
+¦   Makefile
+¦   neurocity_structure.txt
+¦   
++---.sixth
+¦   +---skills
++---backend
+¦   ¦   alembic.ini
+¦   ¦   Dockerfile
+¦   ¦   requirements.txt
+¦   ¦   
+¦   +---alembic
+¦   ¦   ¦   env.py
+¦   ¦   ¦   
+¦   ¦   +---versions
+¦   ¦           20260608_0001_phase1_digital_twin_core.py
+¦   ¦           
+¦   +---app
+¦   ¦       config.py
+¦   ¦       health.py
+¦   ¦       main.py
+¦   ¦       __init__.py
+¦   ¦       
+¦   +---scripts
+¦   ¦       migrate.py
+¦   ¦       seed.py
+¦   ¦       seed_chennai.py
+¦   ¦       
+¦   +---src
+¦       ¦   __init__.py
+¦       ¦   
+¦       +---api
+¦       ¦   ¦   router.py
+¦       ¦   ¦   __init__.py
+¦       ¦   ¦   
+¦       ¦   +---v1
+¦       ¦       ¦   __init__.py
+¦       ¦       ¦   
+¦       ¦       +---endpoints
+¦       ¦               digital_twin.py
+¦       ¦               twin_ws.py
+¦       ¦               __init__.py
+¦       ¦               
+¦       +---core
+¦       ¦       config.py
+¦       ¦       __init__.py
+¦       ¦       
+¦       +---db
+¦       ¦       base.py
+¦       ¦       session.py
+¦       ¦       __init__.py
+¦       ¦       
+¦       +---models
+¦       ¦   ¦   __init__.py
+¦       ¦   ¦   
+¦       ¦   +---city
+¦       ¦           building.py
+¦       ¦           district.py
+¦       ¦           road.py
+¦       ¦           __init__.py
+¦       ¦           
+¦       +---schemas
+¦       ¦       digital_twin.py
+¦       ¦       __init__.py
+¦       ¦       
+¦       +---services
+¦           ¦   __init__.py
+¦           ¦   
+¦           +---digital_twin
+¦                   scoring.py
+¦                   __init__.py
+¦                   
++---frontend
+¦   ¦   Dockerfile.frontend
+¦   ¦   next-env.d.ts
+¦   ¦   next.config.mjs
+¦   ¦   package.json
+¦   ¦   tsconfig.json
+¦   ¦   
+¦   +---app
+¦   ¦   ¦   globals.css
+¦   ¦   ¦   layout.tsx
+¦   ¦   ¦   page.tsx
+¦   ¦   ¦   
+¦   ¦   +---api
+¦   ¦   ¦   +---health
+¦   ¦   ¦           route.ts
+¦   ¦   ¦           
+¦   ¦   +---digital-twin
+¦   ¦           page.tsx
+¦   ¦           
+¦   +---src
+¦       +---components
+¦       ¦   +---DigitalTwin
+¦       ¦   ¦       CityScene.tsx
+¦       ¦   ¦       DetailPanel.tsx
+¦       ¦   ¦       DigitalTwinShell.tsx
+¦       ¦   ¦       DistrictMesh.tsx
+¦       ¦   ¦       Environment.tsx
+¦       ¦   ¦       Legend.tsx
+¦       ¦   ¦       RoadNetwork.tsx
+¦       ¦   ¦       ScoreOverlay.tsx
+¦       ¦   ¦       
+¦       ¦   +---Layout
+¦       ¦   ¦       Header.tsx
+¦       ¦   ¦       
+¦       ¦   +---Shared
+¦       ¦           ErrorBoundary.tsx
+¦       ¦           LoadingSpinner.tsx
+¦       ¦           
+¦       +---hooks
+¦       ¦       useTwinWebSocket.ts
+¦       ¦       
+¦       +---lib
+¦       ¦       api.ts
+¦       ¦       
+¦       +---store
+¦       ¦       twinStore.ts
+¦       ¦       
+¦       +---types
+¦               city.ts
+¦               
++---postgres
+    +---init
+            001-timescaledb.sql
+            
