@@ -5,10 +5,10 @@ from contextlib import suppress
 from fastapi import APIRouter, FastAPI
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from src.db.session import AsyncSessionLocal, get_db_session
+from redis.asyncio import Redis
+from src.db.session import AsyncSessionLocal
 from src.api.v1.endpoints.digital_twin import router as twin_router
 from src.api.v1.endpoints.twin_ws import twin_websocket
 
@@ -27,9 +27,7 @@ async def health_handler() -> JSONResponse:
             await session.execute(text("SELECT 1"))
             db_ok = True
     with suppress(Exception):
-        import redis.asyncio as redis_async
-
-        client = redis_async.from_url(settings.redis_url, decode_responses=True)
+        client = Redis.from_url(settings.redis_url, decode_responses=True)
         redis_ok = bool(await client.ping())
         await client.aclose()
     return JSONResponse(

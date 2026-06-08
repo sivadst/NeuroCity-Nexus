@@ -4,12 +4,13 @@ import asyncio
 import json
 from datetime import UTC, datetime
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import WebSocket, WebSocketDisconnect
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.config import get_settings
 from src.db.session import AsyncSessionLocal
 from src.models.city import District, DistrictScore
 from src.services.digital_twin.scoring import DistrictScoringEngine
@@ -22,6 +23,8 @@ except Exception:  # pragma: no cover
 WS_CHANNEL = "neurocity:twin:updates"
 MAX_CONNECTIONS = 100
 engine = DistrictScoringEngine()
+settings = get_settings()
+INSTANCE_ID = uuid4().hex
 
 
 class TwinConnectionManager:
@@ -38,14 +41,15 @@ class TwinConnectionManager:
         if self._subscriber_task is None:
             self._subscriber_task = asyncio.create_task(self._subscriber_loop())
 
-    async def connect(self, websocket: WebSocket) -> None:
+    async def connect(self, websocket: WebSocket) -> bool:
         if len(self._connections) >= MAX_CONNECTIONS:
             await websocket.close(code=1013, reason="Too many websocket connections")
-            return
+            return False
         await websocket.accept()
         async with self._lock:
             self._connections.add(websocket)
             self._subscriptions[websocket] = None
+        return True
 
     async def disconnect(self, websocket: WebSocket) -> None:
         async with self._lock:
@@ -129,10 +133,11 @@ class TwinConnectionManager:
                 "type": "score_update",
                 "timestamp": datetime.now(UTC),
                 "districts": districts,
+                "source_instance": INSTANCE_ID,
             }
 
     async def _publisher_loop(self) -> None:
-        redis = Redis.from_url("redis://redis:6379/0") if Redis is not None else None
+        redis = Redis.from_url(settings.redis_url, decode_responses=True) if Redis is not None else None
         try:
             while True:
                 payload = await self.snapshot()
@@ -149,7 +154,7 @@ class TwinConnectionManager:
     async def _subscriber_loop(self) -> None:
         if Redis is None:
             return
-        redis = Redis.from_url("redis://redis:6379/0")
+        redis = Redis.from_url(settings.redis_url, decode_responses=True)
         pubsub = redis.pubsub()
         await pubsub.subscribe(WS_CHANNEL)
         try:
@@ -157,6 +162,8 @@ class TwinConnectionManager:
                 message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
                 if message and message.get("type") == "message":
                     payload = json.loads(message["data"])
+                    if payload.get("source_instance") == INSTANCE_ID:
+                        continue
                     await self.broadcast(payload)
                 await asyncio.sleep(0.1)
         except asyncio.CancelledError:
@@ -175,8 +182,7 @@ async def twin_websocket(websocket: WebSocket) -> None:
     ws://localhost:8000/ws/twin
     """
     await manager.start()
-    await manager.connect(websocket)
-    if websocket.application_state.name == "DISCONNECTED":
+    if not await manager.connect(websocket):
         return
     await manager.send_personal(websocket, await manager.snapshot())
 
