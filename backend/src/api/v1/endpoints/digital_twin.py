@@ -5,7 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import Select, desc, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.session import get_db_session
@@ -76,6 +76,33 @@ async def _latest_road_traffic(session: AsyncSession) -> dict[UUID, RoadTraffic]
     return {row.road_id: row for row in rows}
 
 
+async def _history_rows(session: AsyncSession, hours: int) -> dict[UUID, list[ScoreHistoryPoint]]:
+    rows = (
+        await session.execute(
+            select(DistrictScore)
+            .where(DistrictScore.time >= datetime.now(UTC) - timedelta(hours=hours))
+            .order_by(DistrictScore.district_id.asc(), DistrictScore.time.asc())
+        )
+    ).scalars().all()
+    grouped: dict[UUID, list[ScoreHistoryPoint]] = {}
+    for row in rows:
+        grouped.setdefault(row.district_id, []).append(
+            ScoreHistoryPoint(
+                time=row.time,
+                value=engine.composite_score(
+                    {
+                        "traffic": float(row.traffic_score),
+                        "energy": float(row.energy_score),
+                        "pollution": float(row.pollution_score),
+                        "carbon": float(row.carbon_score),
+                        "sustainability": float(row.sustainability_score),
+                    }
+                ),
+            )
+        )
+    return grouped
+
+
 async def _get_district_or_404(session: AsyncSession, district_id: UUID) -> District:
     district = (await session.execute(select(District).where(District.id == district_id))).scalar_one_or_none()
     if district is None:
@@ -97,7 +124,38 @@ async def list_districts(
     districts = (await session.execute(select(District).order_by(District.name))).scalars().all()
     latest_scores = await _latest_scores(session)
     latest_traffic = await _latest_road_traffic(session)
-    history_start = datetime.now(UTC) - timedelta(hours=24)
+    histories = await _history_rows(session, 24) if include_history else {}
+    buildings_by_district: dict[UUID, list[BuildingResponse]] = {}
+    if include_buildings:
+        buildings = (await session.execute(select(Building).order_by(Building.name))).scalars().all()
+        for building in buildings:
+            buildings_by_district.setdefault(building.district_id, []).append(
+                BuildingResponse.model_validate(building, from_attributes=True)
+            )
+    roads_by_district: dict[UUID, list[RoadResponse]] = {}
+    if include_roads:
+        roads = (await session.execute(select(Road).order_by(Road.name))).scalars().all()
+        for road in roads:
+            traffic = latest_traffic.get(road.id)
+            road_model = RoadResponse.model_validate(road, from_attributes=True)
+            roads_by_district.setdefault(road.from_district_id, []).append(
+                road_model.model_copy(
+                    update={
+                        "latest_traffic": RoadTrafficResponse.model_validate(traffic, from_attributes=True)
+                        if traffic
+                        else None
+                    }
+                )
+            )
+            roads_by_district.setdefault(road.to_district_id, []).append(
+                road_model.model_copy(
+                    update={
+                        "latest_traffic": RoadTrafficResponse.model_validate(traffic, from_attributes=True)
+                        if traffic
+                        else None
+                    }
+                )
+            )
 
     results: list[DistrictResponse] = []
     for district in districts:
@@ -125,12 +183,11 @@ async def list_districts(
                 }
             ),
             last_updated=score.time,
+            buildings=buildings_by_district.get(district.id) if include_buildings else None,
+            roads=roads_by_district.get(district.id) if include_roads else None,
+            history=histories.get(district.id) if include_history else None,
         )
         results.append(payload)
-
-    if include_history or include_buildings or include_roads:
-        # Endpoint stays response-model compatible; detailed data belongs in /districts/{id}.
-        return results
     return results
 
 
@@ -165,9 +222,12 @@ async def get_district(
     for road in roads:
         traffic = latest_traffic.get(road.id)
         road_payload.append(
-            RoadResponse(
-                model_validate(road, from_attributes=True),
-                latest_traffic=RoadTrafficResponse.model_validate(traffic, from_attributes=True) if traffic else None,
+            RoadResponse.model_validate(road, from_attributes=True).model_copy(
+                update={
+                    "latest_traffic": RoadTrafficResponse.model_validate(traffic, from_attributes=True)
+                    if traffic
+                    else None
+                }
             )
         )
 
@@ -334,7 +394,7 @@ async def refresh(session: AsyncSession = Depends(get_db_session)) -> RefreshRes
 async def district_history(
     district_id: UUID,
     hours: int = Query(default=24, ge=1, le=168),
-    metric: str = Query(default="all"),
+    metric: Literal["traffic", "energy", "pollution", "carbon", "sustainability", "all"] = Query(default="all"),
     session: AsyncSession = Depends(get_db_session),
 ) -> DistrictHistoryResponse:
     """Return historical district score data for charts.
