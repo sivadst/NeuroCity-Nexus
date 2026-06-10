@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.session import get_db_session
-from src.models.city import Building, District, DistrictScore, Road, RoadTraffic
+from src.models.city import Building, District, DistrictScore, Road, RoadTraffic, WeatherReading
 from src.schemas.digital_twin import (
     BuildingResponse,
     CityDistrictSummary,
@@ -22,11 +22,14 @@ from src.schemas.digital_twin import (
     RoadTrafficResponse,
     ScoreBundle,
     ScoreHistoryPoint,
+    WeatherResponse,
 )
 from src.services.digital_twin.scoring import DistrictScoringEngine
+from src.services.digital_twin.weather import WeatherService
 
 router = APIRouter(prefix="/twin", tags=["Digital Twin"])
 engine = DistrictScoringEngine()
+weather_service = WeatherService()
 
 
 def _score_bundle(score: DistrictScore) -> ScoreBundle:
@@ -288,6 +291,11 @@ async def get_state(session: AsyncSession = Depends(get_db_session)) -> CityStat
     """
     districts = (await session.execute(select(District))).scalars().all()
     latest_scores = await _latest_scores(session)
+    
+    # Fetch latest weather
+    weather_stmt = select(WeatherReading).order_by(desc(WeatherReading.time)).limit(1)
+    weather = (await session.execute(weather_stmt)).scalar_one_or_none()
+    
     if not latest_scores:
         return CityStateResponse(
             avg_traffic_score=0,
@@ -299,6 +307,7 @@ async def get_state(session: AsyncSession = Depends(get_db_session)) -> CityStat
             active_districts_count=0,
             total_population=0,
             last_update_time=None,
+            weather=WeatherResponse.model_validate(weather) if weather else None,
         )
 
     score_rows = list(latest_scores.values())
@@ -371,6 +380,7 @@ async def get_state(session: AsyncSession = Depends(get_db_session)) -> CityStat
                 }
             ),
         ),
+        weather=WeatherResponse.model_validate(weather) if weather else None,
     )
 
 
@@ -381,6 +391,7 @@ async def refresh(session: AsyncSession = Depends(get_db_session)) -> RefreshRes
     curl -X POST http://localhost:8000/api/v1/twin/refresh
     """
     start = datetime.now(UTC)
+    await weather_service.update_weather(session)
     updated = await engine.update_all_districts(session)
     elapsed = (datetime.now(UTC) - start).total_seconds() * 1000.0
     return RefreshResponse(

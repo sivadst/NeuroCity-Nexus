@@ -8,7 +8,7 @@ import { useTwinStore } from "@/src/store/twinStore";
 const MAX_BACKOFF = 30000;
 
 export function useTwinWebSocket() {
-  const { setDistricts, updateDistrictScores, setCityState, setConnectionStatus, setLastUpdate } = useTwinStore();
+  const { setDistricts, updateDistrictScores, setCityState, setWeather, setConnectionStatus, setLastUpdate } = useTwinStore();
   const socketRef = useRef<WebSocket | null>(null);
   const backoffRef = useRef(1000);
   const heartbeatRef = useRef<number | null>(null);
@@ -33,6 +33,9 @@ export function useTwinWebSocket() {
         if (stopped) return;
         setDistricts(districts);
         setCityState(cityState);
+        if (cityState.weather) {
+          setWeather(cityState.weather);
+        }
 
         const socket = new WebSocket("ws://localhost:8000/ws/twin");
         socketRef.current = socket;
@@ -53,8 +56,12 @@ export function useTwinWebSocket() {
           const payload = JSON.parse(event.data);
           if (payload.type === "score_update") {
             updateDistrictScores(payload.districts);
+            if (payload.weather) {
+              setWeather(payload.weather);
+            }
             setLastUpdate(payload.timestamp);
-          } else if (payload.type === "heartbeat" || payload.type === "pong") {
+          }
+ else if (payload.type === "heartbeat" || payload.type === "pong") {
             if (pongTimerRef.current) window.clearTimeout(pongTimerRef.current);
           }
         };

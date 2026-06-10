@@ -1,12 +1,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-import type { CityState, District, ScoreUpdate } from "@/src/types/city";
+import type { CityState, District, ScoreUpdate, Weather } from "@/src/types/city";
 
 interface TwinState {
   districts: District[];
   selectedDistrict: District | null;
   cityState: CityState | null;
+  weather: Weather | null;
   connectionStatus: "connected" | "disconnected" | "connecting";
   lastUpdate: string | null;
   showDistricts: boolean;
@@ -17,6 +18,7 @@ interface TwinState {
   updateDistrictScores: (updates: ScoreUpdate["districts"]) => void;
   selectDistrict: (district: District | null) => void;
   setCityState: (state: CityState) => void;
+  setWeather: (weather: Weather | null) => void;
   setConnectionStatus: (status: TwinState["connectionStatus"]) => void;
   setLastUpdate: (time: string) => void;
   setLayerVisibility: (layer: "showDistricts" | "showRoads" | "showBuildings" | "showScores", value: boolean) => void;
@@ -28,6 +30,7 @@ export const useTwinStore = create<TwinState>()(
       districts: [],
       selectedDistrict: null,
       cityState: null,
+      weather: null,
       connectionStatus: "disconnected",
       lastUpdate: null,
       showDistricts: true,
@@ -66,6 +69,7 @@ export const useTwinStore = create<TwinState>()(
         }),
       selectDistrict: (district) => set({ selectedDistrict: district }),
       setCityState: (state) => set({ cityState: state }),
+      setWeather: (weather) => set({ weather }),
       setConnectionStatus: (status) => set({ connectionStatus: status }),
       setLastUpdate: (time) => set({ lastUpdate: time }),
       setLayerVisibility: (layer, value) => set({ [layer]: value } as Partial<TwinState>)

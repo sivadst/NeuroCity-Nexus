@@ -51,6 +51,15 @@ export interface Building {
   energy_consumption_annual: number;
 }
 
+export interface Weather {
+  temperature: number;
+  humidity: number;
+  condition: "clear" | "cloudy" | "rain" | "storm" | "fog";
+  wind_speed: number;
+  precipitation: number;
+  air_quality_index: number;
+}
+
 export interface CityState {
   avg_traffic_score: number;
   avg_energy_score: number;
@@ -63,6 +72,7 @@ export interface CityState {
   last_update_time: string;
   top_performing_district: { id: string; name: string; composite_score: number } | null;
   worst_performing_district: { id: string; name: string; composite_score: number } | null;
+  weather?: Weather | null;
 }
 
 export interface ScoreHistoryPoint {
@@ -85,4 +95,5 @@ export interface ScoreUpdate {
     composite_score: number;
     changed: boolean;
   }>;
+  weather?: Weather | null;
 }

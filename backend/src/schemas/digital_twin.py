@@ -99,6 +99,18 @@ class CityDistrictSummary(BaseModel):
     composite_score: float
 
 
+class WeatherResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    time: datetime
+    temperature: float
+    humidity: float
+    condition: str
+    wind_speed: float
+    precipitation: float
+    air_quality_index: int
+
+
 class CityStateResponse(BaseModel):
     avg_traffic_score: float
     avg_energy_score: float
@@ -111,6 +123,7 @@ class CityStateResponse(BaseModel):
     last_update_time: datetime | None
     top_performing_district: CityDistrictSummary | None = None
     worst_performing_district: CityDistrictSummary | None = None
+    weather: WeatherResponse | None = None
 
 
 class RefreshResponse(BaseModel):

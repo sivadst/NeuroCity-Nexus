@@ -7,12 +7,12 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from fastapi import WebSocket, WebSocketDisconnect
-from sqlalchemy import func, select
+from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import get_settings
 from src.db.session import AsyncSessionLocal
-from src.models.city import District, DistrictScore
+from src.models.city import District, DistrictScore, WeatherReading
 from src.services.digital_twin.scoring import DistrictScoringEngine
 
 try:
@@ -104,6 +104,10 @@ class TwinConnectionManager:
                     .order_by(District.name)
                 )
             ).all()
+            # Fetch latest weather
+            weather_stmt = select(WeatherReading).order_by(desc(WeatherReading.time)).limit(1)
+            weather = (await session.execute(weather_stmt)).scalar_one_or_none()
+            
             districts = []
             for district, score in rows:
                 districts.append(
@@ -133,6 +137,14 @@ class TwinConnectionManager:
                 "type": "score_update",
                 "timestamp": datetime.now(UTC),
                 "districts": districts,
+                "weather": {
+                    "temperature": weather.temperature,
+                    "humidity": weather.humidity,
+                    "condition": weather.condition,
+                    "wind_speed": weather.wind_speed,
+                    "precipitation": weather.precipitation,
+                    "air_quality_index": weather.air_quality_index,
+                } if weather else None,
                 "source_instance": INSTANCE_ID,
             }
 

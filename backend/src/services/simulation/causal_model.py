@@ -62,3 +62,19 @@ def predict_sustainability_impact(
     total_investment = renewable_investment + transit_investment + green_investment
     improvement = total_investment * 0.15
     return min(100, baseline_sustainability_score + improvement)
+
+
+def predict_infrastructure_impact(
+    road_expansion_km: float,
+    new_transit_lines: int,
+    baseline_traffic_score: float,
+    baseline_pollution_score: float
+) -> tuple[float, float]:
+    """Predict impact of infrastructure changes on traffic and pollution."""
+    traffic_improvement = (road_expansion_km * 0.5) + (new_transit_lines * 2.0)
+    pollution_impact = (new_transit_lines * 1.5) - (road_expansion_km * 0.2) # Roads might increase pollution
+
+    return (
+        min(100, baseline_traffic_score + traffic_improvement),
+        min(100, baseline_pollution_score + pollution_impact)
+    )

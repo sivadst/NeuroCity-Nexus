@@ -8,7 +8,7 @@ from uuid import UUID
 from sqlalchemy import Select, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models.city import District, DistrictScore, Road, RoadTraffic
+from src.models.city import District, DistrictScore, Road, RoadTraffic, WeatherReading, WeatherCondition
 
 
 class DistrictScoringEngine:
@@ -20,10 +20,27 @@ class DistrictScoringEngine:
         normalized = (value - min_val) / (max_val - min_val) * 100.0
         return max(0.0, min(100.0, normalized))
 
-    def compute_traffic_score(self, vehicle_count: int, capacity: int, avg_speed: float, speed_limit: int) -> float:
+    def compute_traffic_score(
+        self, 
+        vehicle_count: int, 
+        capacity: int, 
+        avg_speed: float, 
+        speed_limit: int,
+        weather: WeatherReading | None = None
+    ) -> float:
         if capacity <= 0 or speed_limit <= 0:
             return 0.0
-        score = 100 - (vehicle_count / capacity * 50) - ((speed_limit - avg_speed) / speed_limit * 30)
+            
+        weather_penalty = 0.0
+        if weather:
+            if weather.condition == WeatherCondition.RAIN:
+                weather_penalty = 10.0
+            elif weather.condition == WeatherCondition.STORM:
+                weather_penalty = 25.0
+            elif weather.condition == WeatherCondition.FOG:
+                weather_penalty = 15.0
+                
+        score = 100 - (vehicle_count / capacity * 50) - ((speed_limit - avg_speed) / speed_limit * 30) - weather_penalty
         return max(0.0, min(100.0, score))
 
     def compute_energy_score(
@@ -32,10 +49,20 @@ class DistrictScoringEngine:
         renewable_ratio: float,
         peak_demand: float,
         baseline_demand: float,
+        weather: WeatherReading | None = None
     ) -> float:
         if peak_demand <= 0 or baseline_demand <= 0:
             return 0.0
-        score = renewable_ratio * 40 + (1 - consumption_kwh / peak_demand) * 35 + (1 - peak_demand / baseline_demand) * 25
+            
+        # HVAC impact based on temperature
+        temp_impact = 0.0
+        if weather:
+            if weather.temperature > 32.0: # High heat
+                temp_impact = (weather.temperature - 32.0) * 2.0
+            elif weather.temperature < 18.0: # Unlikely in Chennai but for logic
+                temp_impact = (18.0 - weather.temperature) * 1.5
+                
+        score = renewable_ratio * 40 + (1 - (consumption_kwh + temp_impact * 1000) / peak_demand) * 35 + (1 - peak_demand / baseline_demand) * 25
         return max(0.0, min(100.0, score))
 
     def compute_pollution_score(
@@ -44,10 +71,22 @@ class DistrictScoringEngine:
         pm25: float,
         co2_emissions_tons: float,
         area_sqkm: float,
+        weather: WeatherReading | None = None
     ) -> float:
         if area_sqkm <= 0:
             return 0.0
-        score = 100 - (aqi / 500 * 40) - (pm25 / 250 * 30) - (co2_emissions_tons / area_sqkm / 100 * 30)
+            
+        # Wind helps disperse pollution
+        wind_bonus = 0.0
+        if weather and weather.wind_speed > 15.0:
+            wind_bonus = (weather.wind_speed - 15.0) * 0.5
+            
+        # Rain washes out pollutants
+        rain_bonus = 0.0
+        if weather and weather.condition == WeatherCondition.RAIN:
+            rain_bonus = 10.0
+            
+        score = 100 - (aqi / 500 * 40) - (pm25 / 250 * 30) - (co2_emissions_tons / area_sqkm / 100 * 30) + wind_bonus + rain_bonus
         return max(0.0, min(100.0, score))
 
     def compute_carbon_score(self, total_emissions_tons: float, area_sqkm: float, population: int) -> float:
@@ -62,8 +101,17 @@ class DistrictScoringEngine:
         renewable_ratio: float,
         green_space_percent: float,
         transit_access_score: float,
+        weather: WeatherReading | None = None
     ) -> float:
-        score = renewable_ratio * 30 + green_space_percent * 0.4 + transit_access_score * 0.3
+        # Weather can affect renewable efficiency
+        weather_mod = 1.0
+        if weather:
+            if weather.condition in (WeatherCondition.RAIN, WeatherCondition.STORM, WeatherCondition.CLOUDY):
+                weather_mod = 0.7 # Less solar
+            if weather.wind_speed > 20.0:
+                weather_mod += 0.2 # More wind power
+                
+        score = (renewable_ratio * weather_mod) * 30 + green_space_percent * 0.4 + transit_access_score * 0.3
         return max(0.0, min(100.0, score))
 
     def composite_score(self, scores: dict[str, float], weights: dict[str, float] | None = None) -> float:
@@ -106,6 +154,10 @@ class DistrictScoringEngine:
                 & (RoadTraffic.time == latest_roads_sq.c.time),
             )
         )
+        
+        # Fetch latest weather
+        weather_stmt = select(WeatherReading).order_by(desc(WeatherReading.time)).limit(1)
+        weather = (await session.execute(weather_stmt)).scalar_one_or_none()
 
         latest_score_rows = (await session.execute(latest_scores_stmt)).scalars().all()
         road_rows = (await session.execute(latest_roads_stmt)).all()
@@ -135,17 +187,17 @@ class DistrictScoringEngine:
                 avg_speed = 0.0
                 speed_limit = 1
 
-            traffic_score = self.compute_traffic_score(vehicle_count, capacity, avg_speed, speed_limit)
+            traffic_score = self.compute_traffic_score(vehicle_count, capacity, avg_speed, speed_limit, weather)
             renewable_ratio = min(1.0, max(0.0, (latest.sustainability_score if latest else 60.0) / 100.0))
             consumption_kwh = district.population * 2.25
             peak_demand = consumption_kwh * (1.1 + (1 - renewable_ratio) * 0.2)
             baseline_demand = consumption_kwh * 1.35
-            energy_score = self.compute_energy_score(consumption_kwh, renewable_ratio, peak_demand, baseline_demand)
+            energy_score = self.compute_energy_score(consumption_kwh, renewable_ratio, peak_demand, baseline_demand, weather)
 
             aqi = 80 - traffic_score * 0.4
             pm25 = 40 - traffic_score * 0.18
             co2_emissions_tons = district.population * 0.0008 + vehicle_count * 0.002
-            pollution_score = self.compute_pollution_score(aqi, pm25, co2_emissions_tons, district.area_sqkm)
+            pollution_score = self.compute_pollution_score(aqi, pm25, co2_emissions_tons, district.area_sqkm, weather)
 
             total_emissions_tons = district.population * 0.00092 + co2_emissions_tons
             carbon_score = self.compute_carbon_score(total_emissions_tons, district.area_sqkm, district.population)
@@ -156,6 +208,7 @@ class DistrictScoringEngine:
                 renewable_ratio,
                 green_space_percent,
                 transit_access_score,
+                weather
             )
             composite = self.composite_score(
                 {

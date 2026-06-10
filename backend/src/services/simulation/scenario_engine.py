@@ -148,6 +148,24 @@ class ScenarioEngine:
             predicted["carbon"] = min(100, baseline["carbon"] + renewable_invest * 8)
             predicted["traffic"] = min(100, baseline["traffic"] + transit_invest * 5)
 
+        elif config.scenario_type == "infrastructure_change":
+            road_expansion = config.changes.get("road_expansion_km", 0.0)
+            new_transit = config.changes.get("new_transit_lines", 0)
+            
+            traffic, pollution = predict_traffic_impact(
+                0.0, baseline["traffic"] # assuming no pop change for this calc
+            ), baseline["pollution"]
+            
+            # Using our new infra predictor
+            from src.services.simulation.causal_model import predict_infrastructure_impact
+            new_traffic, new_pollution = predict_infrastructure_impact(
+                road_expansion, new_transit, baseline["traffic"], baseline["pollution"]
+            )
+            
+            predicted["traffic"] = new_traffic
+            predicted["pollution"] = new_pollution
+            predicted["sustainability"] = min(100, baseline["sustainability"] + new_transit * 3)
+
         elif config.scenario_type == "disaster":
             severity = config.changes.get("severity", 0.5)
             affected_metrics = config.changes.get("affected_metrics", ["traffic", "energy", "pollution"])

@@ -5,6 +5,7 @@ import { Brain, RefreshCcw, Settings } from "lucide-react";
 
 import { refreshScores } from "@/src/lib/api";
 import { useTwinStore } from "@/src/store/twinStore";
+import { WeatherDisplay } from "@/src/components/DigitalTwin/WeatherDisplay";
 
 const navItems = ["Dashboard", "Digital Twin", "Simulation", "Copilot", "Crisis", "Forecasting", "RL", "XAI"];
 
@@ -25,6 +26,9 @@ export function Header() {
           </Link>
         ))}
       </nav>
+      <div className="hidden xl:block">
+        <WeatherDisplay />
+      </div>
       <div className="flex items-center gap-3 text-sm">
         <span className="flex items-center gap-2 text-white/70">
           <span
