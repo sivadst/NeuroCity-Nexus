@@ -1,54 +1,26 @@
-from __future__ import annotations
-
-import enum
 import uuid
-from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, Float, ForeignKey, Integer, String, func, Uuid
+from sqlalchemy import Float, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base
 
 
-class BuildingType(str, enum.Enum):
-    residential = "residential"
-    commercial = "commercial"
-    industrial = "industrial"
-    public = "public"
-
-
 class Building(Base):
     __tablename__ = "buildings"
 
-    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    district_id: Mapped[uuid.UUID] = mapped_column(
-        Uuid(as_uuid=True),
-        ForeignKey("districts.id", ondelete="CASCADE"),
-        nullable=False,
-    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    district_id: Mapped[str] = mapped_column(String(36), ForeignKey("districts.id", ondelete="CASCADE"), nullable=False)
     name: Mapped[str] = mapped_column(String(160), nullable=False)
-    type: Mapped[BuildingType] = mapped_column(Enum(BuildingType, name="building_type"), nullable=False)
-    floors: Mapped[int] = mapped_column(Integer, nullable=False)
+    type: Mapped[str] = mapped_column(String(20), nullable=False)  # residential/commercial/industrial/public
+    floors: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     footprint_area: Mapped[float] = mapped_column(Float, nullable=False)
-    height_m: Mapped[float] = mapped_column(Float, nullable=False)
-    energy_consumption_annual: Mapped[float] = mapped_column(Float, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-    )
+    height_m: Mapped[float] = mapped_column(Float, nullable=True)
+    energy_consumption_annual: Mapped[float] = mapped_column(Float, nullable=True)
 
-    district: Mapped["District"] = relationship(back_populates="buildings")
+    district = relationship("District", back_populates="buildings")
 
     __table_args__ = (
-        CheckConstraint("floors > 0", name="ck_buildings_floors_positive"),
-        CheckConstraint("footprint_area > 0", name="ck_buildings_footprint_positive"),
-        CheckConstraint("height_m > 0", name="ck_buildings_height_positive"),
-        CheckConstraint(
-            "energy_consumption_annual >= 0",
-            name="ck_buildings_energy_non_negative",
-        ),
+        Index("idx_buildings_district", "district_id"),
+        Index("idx_buildings_type", "type"),
     )
-
-
-from src.models.city.district import District  # noqa: E402
