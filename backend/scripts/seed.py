@@ -1,6 +1,6 @@
 import asyncio
 
-from scripts.seed_chennai import main
+from seed_chennai import main
 
 
 if __name__ == "__main__":

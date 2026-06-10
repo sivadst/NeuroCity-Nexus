@@ -7,7 +7,16 @@ import { refreshScores } from "@/src/lib/api";
 import { useTwinStore } from "@/src/store/twinStore";
 import { WeatherDisplay } from "@/src/components/DigitalTwin/WeatherDisplay";
 
-const navItems = ["Dashboard", "Digital Twin", "Simulation", "Copilot", "Crisis", "Forecasting", "RL", "XAI"];
+const navItems = [
+  { label: "Dashboard", href: "/" },
+  { label: "Digital Twin", href: "/digital-twin" },
+  { label: "Simulation", href: "/simulation" },
+  { label: "Copilot", href: "#" },
+  { label: "Crisis", href: "#" },
+  { label: "Forecasting", href: "#" },
+  { label: "RL", href: "#" },
+  { label: "XAI", href: "#" }
+];
 
 export function Header() {
   const connectionStatus = useTwinStore((state) => state.connectionStatus);
@@ -21,8 +30,8 @@ export function Header() {
       </div>
       <nav className="hidden items-center gap-5 lg:flex">
         {navItems.map((item) => (
-          <Link key={item} href="#" className="text-sm text-white/70 transition hover:text-white">
-            {item}
+          <Link key={item.label} href={item.href} className="text-sm text-white/70 transition hover:text-white">
+            {item.label}
           </Link>
         ))}
       </nav>
