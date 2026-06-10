@@ -1,9 +1,20 @@
-import uuid
+from __future__ import annotations
 
-from sqlalchemy import Float, ForeignKey, Index, Integer, String
+import enum
+import uuid
+from datetime import datetime
+
+from sqlalchemy import CheckConstraint, DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base
+
+
+class BuildingType(str, enum.Enum):
+    residential = "residential"
+    commercial = "commercial"
+    industrial = "industrial"
+    public = "public"
 
 
 class Building(Base):
@@ -17,10 +28,14 @@ class Building(Base):
     footprint_area: Mapped[float] = mapped_column(Float, nullable=False)
     height_m: Mapped[float] = mapped_column(Float, nullable=True)
     energy_consumption_annual: Mapped[float] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
 
     district = relationship("District", back_populates="buildings")
 
     __table_args__ = (
-        Index("idx_buildings_district", "district_id"),
-        Index("idx_buildings_type", "type"),
-    )
+        CheckConstraint("floors > 0", name="ck_buildings_floors_positive"),
+        CheckConstraint("footprint_area > 0", name="ck_buildings_foot

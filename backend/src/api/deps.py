@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 from sqlalchemy.orm import Session
+
 from src.db.session import SessionLocal
+
 
 def get_db_session():
     db = SessionLocal()
