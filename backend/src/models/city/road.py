@@ -5,8 +5,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, func
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, Float, ForeignKey, Index, Integer, Numeric, String, func, JSON, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base
@@ -21,20 +20,20 @@ class RoadType(str, enum.Enum):
 class Road(Base):
     __tablename__ = "roads"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     road_type: Mapped[RoadType] = mapped_column(Enum(RoadType, name="road_type"), nullable=False)
     from_district_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("districts.id", ondelete="CASCADE"),
         nullable=False,
     )
     to_district_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("districts.id", ondelete="CASCADE"),
         nullable=False,
     )
-    geometry_geojson: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    geometry_geojson: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     length_m: Mapped[float] = mapped_column(Float, nullable=False)
     capacity: Mapped[int] = mapped_column(Integer, nullable=False)
     lanes: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -74,7 +73,7 @@ class RoadTraffic(Base):
 
     time: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True, nullable=False)
     road_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("roads.id", ondelete="CASCADE"),
         primary_key=True,
     )

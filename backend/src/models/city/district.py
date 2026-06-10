@@ -4,8 +4,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import CheckConstraint, DateTime, Float, ForeignKey, Index, Numeric, String, func
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy import CheckConstraint, DateTime, Float, ForeignKey, Index, Numeric, String, func, JSON, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base
@@ -14,10 +13,10 @@ from src.db.base import Base
 class District(Base):
     __tablename__ = "districts"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
     code: Mapped[str] = mapped_column(String(24), unique=True, nullable=False)
-    boundary_geojson: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    boundary_geojson: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
     center_lat: Mapped[float] = mapped_column(Float, nullable=False)
     center_lon: Mapped[float] = mapped_column(Float, nullable=False)
     area_sqkm: Mapped[float] = mapped_column(Float, nullable=False)
@@ -60,7 +59,7 @@ class DistrictScore(Base):
 
     time: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True, nullable=False)
     district_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("districts.id", ondelete="CASCADE"),
         primary_key=True,
     )

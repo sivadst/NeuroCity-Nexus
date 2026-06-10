@@ -4,8 +4,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, DateTime, Enum, Float, ForeignKey, Integer, String, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import CheckConstraint, DateTime, Enum, Float, ForeignKey, Integer, String, func, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db.base import Base
@@ -21,9 +20,9 @@ class BuildingType(str, enum.Enum):
 class Building(Base):
     __tablename__ = "buildings"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     district_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        Uuid(as_uuid=True),
         ForeignKey("districts.id", ondelete="CASCADE"),
         nullable=False,
     )
