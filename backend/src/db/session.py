@@ -1,12 +1,14 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.core.config import get_settings
-
-settings = get_settings()
-
-# Convert async URL to sync URL for SQLite
-db_url = settings.database_url.replace("sqlite+aiosqlite", "sqlite")
+# Adjust this import to match your actual config location
+try:
+    from src.core.config import get_settings
+    settings = get_settings()
+    db_url = settings.database_url.replace("sqlite+aiosqlite", "sqlite")
+except ImportError:
+    # Fallback if config doesn't exist yet
+    db_url = "sqlite:///./neurocity.db"
 
 engine = create_engine(
     db_url,
