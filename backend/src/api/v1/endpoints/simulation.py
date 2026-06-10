@@ -59,7 +59,7 @@ async def create_and_run_scenario(
 
 @router.post("/scenarios/quick/population")
 async def quick_population_scenario(
-    population_multiplier: float = Field(..., ge=0.5, le=3.0),
+    population_multiplier: float = 1.15,
     target_districts: list[str] = None,
     session: AsyncSession = Depends(get_db_session),
 ):
